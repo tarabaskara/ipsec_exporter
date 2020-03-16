@@ -11,6 +11,8 @@ var (
 	metricBytesOut = prometheus.NewDesc("ipsec_out_bytes", "sent bytes per tunnel", []string{"tunnel"}, nil)
 	metricPacketsIn = prometheus.NewDesc("ipsec_in_packets", "received packets per tunnel", []string{"tunnel"}, nil)
 	metricPacketsOut = prometheus.NewDesc("ipsec_out_packets", "sent packets per tunnel", []string{"tunnel"}, nil)
+	metricNumberConnections = prometheus.NewDesc("ipsec_connections", "number of connections", []string{"tunnel"}, nil)
+	metricUsers = prometheus.NewDesc("ipsec_users", "number of users", []string{"tunnel", "name", "user_ip", "vpn_ip"}, nil)
 )
 
 func NewCollector(configurations ... *Configuration) *Collector {
@@ -30,6 +32,8 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- metricBytesOut
 	ch <- metricPacketsIn
 	ch <- metricPacketsOut
+	ch <- metricNumberConnections
+	ch <- metricUsers
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
@@ -43,6 +47,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(metricBytesOut, prometheus.CounterValue, float64(tunnelStatus.bytesOut), tunnel)
 			ch <- prometheus.MustNewConstMetric(metricPacketsIn, prometheus.CounterValue, float64(tunnelStatus.packetsIn), tunnel)
 			ch <- prometheus.MustNewConstMetric(metricPacketsOut, prometheus.CounterValue, float64(tunnelStatus.packetsOut), tunnel)
+			ch <- prometheus.MustNewConstMetric(metricNumberConnections, prometheus.GaugeValue, float64(tunnelStatus.numConnections), tunnel)
+			for _, u := range tunnelStatus.users {
+				ch <- prometheus.MustNewConstMetric(metricUsers, prometheus.GaugeValue, 1, tunnel, u.name, u.userIp, u.vpnIp)
+			}
 		}
 	}
 }

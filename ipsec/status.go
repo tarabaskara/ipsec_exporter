@@ -1,6 +1,7 @@
 package ipsec
 
 import (
+	"fmt"
 	"github.com/prometheus/common/log"
 	"os/exec"
 	"regexp"
@@ -8,12 +9,20 @@ import (
 )
 
 type status struct {
-	up         bool
-	status     connectionStatus
-	bytesIn    int
-	bytesOut   int
-	packetsIn  int
-	packetsOut int
+	up             bool
+	status         connectionStatus
+	bytesIn        int
+	bytesOut       int
+	packetsIn      int
+	packetsOut     int
+	numConnections int
+	users          []user
+}
+
+type user struct {
+	name   string
+	userIp string
+	vpnIp  string
 }
 
 type connectionStatus int
@@ -64,17 +73,44 @@ func queryStatus(ipSecConfiguration *Configuration, provider statusProvider) map
 			}
 		} else {
 			statusMap[connection.name] = &status{
-				up:         true,
-				status:     extractStatus([]byte(out)),
-				bytesIn:    extractIntWithRegex(out, `([[0-9]+) bytes_i`),
-				bytesOut:   extractIntWithRegex(out, `([[0-9]+) bytes_o`),
-				packetsIn:  extractIntWithRegex(out, `bytes_i \(([[0-9]+) pkts`),
-				packetsOut: extractIntWithRegex(out, `bytes_o \(([[0-9]+) pkts`),
+				up:             true,
+				status:         extractStatus([]byte(out)),
+				bytesIn:        extractIntWithRegex(out, `([[0-9]+) bytes_i`),
+				bytesOut:       extractIntWithRegex(out, `([[0-9]+) bytes_o`),
+				packetsIn:      extractIntWithRegex(out, `bytes_i \(([[0-9]+) pkts`),
+				packetsOut:     extractIntWithRegex(out, `bytes_o \(([[0-9]+) pkts`),
+				numConnections: extractNumberOfConnections(connection.name, out),
+				users: 			extractUsers(connection.name, out),
 			}
 		}
 	}
 
 	return statusMap
+}
+
+func extractUsers(connectionName, statusLine string) []user {
+	r := regexp.MustCompile(fmt.Sprintf(`%s\[.+?\]: ESTABLISHED.+\n.+Remote EAP identity.+\n.+\n.+\n.+\n.+\n.+=== .+?\/`, connectionName))
+	blockUsers := r.FindAllString(statusLine, -1)
+
+	users := make([]user, len(blockUsers))
+
+    for i, blockUser := range blockUsers {
+		r = regexp.MustCompile(`(?s)ESTABLISHED.+?\.{3}(.+?)\[.+?EAP identity: (.+?)\n.+=== (.+?)\/`)
+		matches := r.FindAllStringSubmatch(blockUser, -1)
+        match := matches[0]
+        users[i] = user{
+            userIp:match[1],
+			name:match[2],
+			vpnIp:match[3],
+		}
+	}
+	return users
+}
+
+func extractNumberOfConnections(connectionName, statusLine string) int {
+	r := regexp.MustCompile(fmt.Sprintf(`%s\[.+?\]: ESTABLISHED`, connectionName))
+	matches := r.FindAllString(statusLine, -1)
+	return len(matches)
 }
 
 func extractStatus(statusLine []byte) connectionStatus {

@@ -40,11 +40,19 @@ Connections:
         foo:   child:  172.19.10.0/24 === 172.19.5.0/24 TUNNEL, dpdaction=restart
 Security Associations (1 up, 0 connecting):
         foo[21]: ESTABLISHED 16 hours ago, 10.0.0.10[117.17.17.17]...137.37.37.37[137.37.37.37]
+        foo[21]: Remote EAP identity: tony.stark
         foo[21]: IKEv2 SPIs: b26da4ae5279684d_i* 7f5b0cfd45d5dc94_r, pre-shared key reauthentication in 7 hours
         foo[21]: IKE proposal: AES_CBC_256/HMAC_SHA2_256_128/PRF_HMAC_SHA2_256/MODP_2048
         foo{83}:  INSTALLED, TUNNEL, reqid 21, ESP in UDP SPIs: c96e6b17_i 34f71a54_o
         foo{83}:  AES_CBC_256/HMAC_SHA2_256_128, 2646320 bytes_i (37510 pkts, 0s ago), 3014849 bytes_o (54623 pkts, 0s ago), rekeying in 21 hours
-        foo{83}:   172.19.10.0/24 === 172.19.5.0/24
+        foo{83}:   172.19.10.0/24 === 172.19.5.1/32
+        foo[21]: ESTABLISHED 19 hours ago, 10.0.0.10[117.17.17.17]...137.37.37.38[137.37.37.37]
+        foo[21]: Remote EAP identity: bruce.wayne
+        foo[21]: IKEv2 SPIs: b26da4aedlkfdf4d_i* 7f5b0cfd45d5dc94_r, pre-shared key reauthentication in 7 hours
+        foo[21]: IKE proposal: AES_CBC_256/HMAC_SHA2_256_128/PRF_HMAC_SHA2_256/MODP_2048
+        foo{83}:  INSTALLED, TUNNEL, reqid 21, ESP in UDP SPIs: c96e6b17_i 34f71a54_o
+        foo{83}:  AES_CBC_256/HMAC_SHA2_256_128, 2646320 bytes_i (37510 pkts, 0s ago), 3014849 bytes_o (54623 pkts, 0s ago), rekeying in 21 hours
+        foo{83}:   172.19.10.0/24 === 172.19.5.2/32
 `})
 
 	if status[tunnelName] == nil {
@@ -83,6 +91,39 @@ Security Associations (1 up, 0 connecting):
 	actualPacketsOut := status[tunnelName].packetsOut
 	if actualPacketsOut != expectedPacketsOut {
 		t.Errorf("Expected '%d' received bytes, but was '%d'", expectedPacketsOut, actualPacketsOut)
+	}
+
+	expectedNumConnections := 2
+	actualNumConnections := status[tunnelName].numConnections
+	if actualNumConnections != expectedNumConnections {
+		t.Errorf("Expected '%d' number of connections, but was '%d'", expectedNumConnections, actualNumConnections)
+	}
+
+	expectedNumUsers := 2
+	actualUsers := status[tunnelName].users
+	if len(actualUsers) != expectedNumUsers {
+		t.Errorf("Expected '%d' number of users, but was '%d'", expectedNumUsers, len(actualUsers))
+	}
+	// check name
+	expectedNames := []string{"tony.stark", "bruce.wayne"}
+	for i, n := range expectedNames {
+		if actualUsers[i].name != n {
+			t.Errorf("Expected '%s' for name, but was '%s'", actualUsers[i].name, n)
+		}
+	}
+	// check user ip
+	expectedUserIps := []string{"137.37.37.37", "137.37.37.38"}
+	for i, ip := range expectedUserIps {
+		if actualUsers[i].userIp != ip {
+			t.Errorf("Expected '%s' for ip, but was '%s'", actualUsers[i].userIp, ip)
+		}
+	}
+	// check vpn ip
+	expectedVpnIps := []string{"172.19.5.1", "172.19.5.2"}
+	for i, ip := range expectedVpnIps {
+		if actualUsers[i].vpnIp != ip {
+			t.Errorf("Expected '%s' for ip, but was '%s'", actualUsers[i].vpnIp, ip)
+		}
 	}
 }
 
