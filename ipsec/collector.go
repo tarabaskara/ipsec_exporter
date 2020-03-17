@@ -13,6 +13,7 @@ var (
 	metricPacketsOut = prometheus.NewDesc("ipsec_out_packets", "sent packets per tunnel", []string{"tunnel"}, nil)
 	metricNumberConnections = prometheus.NewDesc("ipsec_connections", "number of connections", []string{"tunnel"}, nil)
 	metricUsers = prometheus.NewDesc("ipsec_users", "number of users", []string{"tunnel", "name", "user_ip", "vpn_ip"}, nil)
+	metricCertNotAfter = prometheus.NewDesc("ipsec_cert_not_after", "Ipsec cert not after expiry", []string{"alt_name", "serial"}, nil)
 )
 
 func NewCollector(configurations ... *Configuration) *Collector {
@@ -34,6 +35,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- metricPacketsOut
 	ch <- metricNumberConnections
 	ch <- metricUsers
+	ch <- metricCertNotAfter
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
@@ -52,6 +54,11 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 				ch <- prometheus.MustNewConstMetric(metricUsers, prometheus.GaugeValue, 1, tunnel, u.name, u.userIp, u.vpnIp)
 			}
 		}
+	}
+
+	listCerts := queryCerts(&cliCertsProvider{})
+	for _, cert := range listCerts {
+		ch <- prometheus.MustNewConstMetric(metricCertNotAfter, prometheus.GaugeValue, float64(cert.notAfterTime.Unix()), cert.name, cert.serial)
 	}
 }
 
