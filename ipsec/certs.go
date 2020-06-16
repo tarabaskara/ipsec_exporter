@@ -22,7 +22,7 @@ type cliCertsProvider struct {
 }
 
 func (c *cliCertsProvider) certsOutput() (string, error) {
-	cmd := exec.Command("/bin/sh", "-c", "sudo ipsec listcerts")
+	cmd := exec.Command("sudo", "ipsec", "listcerts")
 	out, err := cmd.Output()
 	if err != nil {
 		return "", err
