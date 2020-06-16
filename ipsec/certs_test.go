@@ -14,12 +14,11 @@ func (d *dummyCertsProvider) certsOutput() (string, error) {
 	return d.returnString, nil
 }
 
-
 func TestQueryCerts(t *testing.T) {
 	certs := queryCerts(&dummyCertsProvider{returnString: `
 List of X.509 End Entity Certificates:
 
-  altNames:  org1.vpn.something.com
+  altNames:  org1.vpn.something.com,org2.vpn.something.com,
   subject:  "CN=org1.vpn.something.com"
   issuer:   "C=US, O=Let's Encrypt, CN=Let's Encrypt Authority X3"
   serial:    04:0f:8e:47:cc:17:38:c4:54:15:1a:24:28:0c:e7:05:3e:f5
@@ -48,9 +47,9 @@ List of X.509 End Entity Certificates:
 		return
 	}
 
-    expectedNames := []string{"org1.vpn.something.com", "org2.vpn.something.com"}
-    for i, name := range expectedNames {
-    	if name != certs[i].name {
+	expectedNames := []string{"org1.vpn.something.com", "org2.vpn.something.com"}
+	for i, name := range expectedNames {
+		if name != certs[i].name {
 			t.Errorf("Expected certs vpn name '%s' got '%s", name, certs[i].name)
 			return
 		}

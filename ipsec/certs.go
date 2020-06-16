@@ -1,7 +1,6 @@
 package ipsec
 
 import (
-	"os"
 	"os/exec"
 	"regexp"
 	"time"
@@ -23,10 +22,7 @@ type cliCertsProvider struct {
 }
 
 func (c *cliCertsProvider) certsOutput() (string, error) {
-	cmd := exec.Command("ipsec", "listcerts")
-	if os.Geteuid() != 0 {
-		cmd = exec.Command("sudo", "ipsec", "listcerts")
-	}
+	cmd := exec.Command("sudo", "ipsec", "listcerts")
 	out, err := cmd.Output()
 
 	if err != nil {
@@ -44,7 +40,7 @@ func queryCerts(outputProvider certsProvider) []certs {
 		return nil
 	}
 
-	r := regexp.MustCompile(`(?sm)altNames:\s+(.+?)$.+?serial:\s+(.+?)$.+?not after\s+(.+?),`)
+	r := regexp.MustCompile(`(?sm)subject:\s+.*?CN=(.+?)[\s"]?$.+?serial:\s+(.+?)$.+?not after\s+(.+?),`)
 	matches := r.FindAllStringSubmatch(out, -1)
 
 	listCerts := make([]certs, len(matches))
