@@ -2,10 +2,12 @@ package ipsec
 
 import (
 	"fmt"
-	"github.com/prometheus/common/log"
+	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
+
+	"github.com/prometheus/common/log"
 )
 
 type status struct {
@@ -44,6 +46,9 @@ type cliStatusProvider struct {
 
 func (c *cliStatusProvider) statusOutput(tunnel connection) (string, error) {
 	cmd := exec.Command("ipsec", "statusall", tunnel.name)
+	if os.Geteuid() != 0 {
+		cmd = exec.Command("sudo", "ipsec", "statusall", tunnel.name)
+	}
 	out, err := cmd.Output()
 
 	if err != nil {
@@ -80,7 +85,7 @@ func queryStatus(ipSecConfiguration *Configuration, provider statusProvider) map
 				packetsIn:      extractIntWithRegex(out, `bytes_i \(([[0-9]+) pkts`),
 				packetsOut:     extractIntWithRegex(out, `bytes_o \(([[0-9]+) pkts`),
 				numConnections: extractNumberOfConnections(connection.name, out),
-				users: 			extractUsers(connection.name, out),
+				users:          extractUsers(connection.name, out),
 			}
 		}
 	}
@@ -94,14 +99,14 @@ func extractUsers(connectionName, statusLine string) []user {
 
 	users := make([]user, len(blockUsers))
 
-    for i, blockUser := range blockUsers {
+	for i, blockUser := range blockUsers {
 		r = regexp.MustCompile(`(?s)ESTABLISHED.+?\.{3}(.+?)\[.+?EAP identity: (.+?)\n.+=== (.+?)\/`)
 		matches := r.FindAllStringSubmatch(blockUser, -1)
-        match := matches[0]
-        users[i] = user{
-            userIp:match[1],
-			name:match[2],
-			vpnIp:match[3],
+		match := matches[0]
+		users[i] = user{
+			userIp: match[1],
+			name:   match[2],
+			vpnIp:  match[3],
 		}
 	}
 	return users
