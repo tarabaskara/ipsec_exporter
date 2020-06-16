@@ -22,9 +22,8 @@ type cliCertsProvider struct {
 }
 
 func (c *cliCertsProvider) certsOutput() (string, error) {
-	cmd := exec.Command("sudo", "ipsec", "listcerts")
+	cmd := exec.Command("/bin/sh", "-c", "sudo ipsec listcerts")
 	out, err := cmd.Output()
-
 	if err != nil {
 		return "", err
 	}
@@ -33,6 +32,8 @@ func (c *cliCertsProvider) certsOutput() (string, error) {
 }
 
 func queryCerts(outputProvider certsProvider) []certs {
+	listCerts := []certs{}
+
 	out, err := outputProvider.certsOutput()
 
 	if err != nil {
@@ -40,19 +41,48 @@ func queryCerts(outputProvider certsProvider) []certs {
 		return nil
 	}
 
-	r := regexp.MustCompile(`(?sm)subject:\s+.*?CN=(.+?)[\s"]?$.+?serial:\s+(.+?)$.+?not after\s+(.+?),`)
+	r := regexp.MustCompile(`(?s)(subject.+?authkey)`)
 	matches := r.FindAllStringSubmatch(out, -1)
 
-	listCerts := make([]certs, len(matches))
-	for i, match := range matches {
-		layout := "Jan 02 15:04:05 2006"
-		t, _ := time.Parse(layout, match[3])
-		listCerts[i] = certs{
-			name:         match[1],
-			serial:       match[2],
-			notAfterTime: t,
+	for _, rawCert := range matches {
+		c := parseCert(rawCert[0])
+		if c != nil {
+			listCerts = append(listCerts, *c)
 		}
 	}
 
 	return listCerts
+}
+
+func parseCert(rawCert string) *certs {
+	var result certs
+
+	rSubject := regexp.MustCompile(`subject:\s*.*?CN=(.+?)[;"]`)
+	matchSubject := rSubject.FindAllStringSubmatch(rawCert, 1)
+	if len(matchSubject) == 0 {
+		log.Warn("Failed to parse certificate subject")
+		return nil
+	}
+
+	rExpiry := regexp.MustCompile(`not after\s+(.+?),`)
+	matchExpiry := rExpiry.FindAllStringSubmatch(rawCert, 1)
+	if len(matchExpiry) == 0 {
+		log.Warn("Failed to parse certificate expiry")
+		return nil
+	}
+	layout := "Jan 02 15:04:05 2006"
+	t, _ := time.Parse(layout, matchExpiry[0][1])
+
+	rSerial := regexp.MustCompile(`serial:\s+(.+)`)
+	matchSerial := rSerial.FindAllStringSubmatch(rawCert, 1)
+	if len(matchSerial) == 0 {
+		log.Warn("Failed to parse certificate serial")
+		return nil
+	}
+
+	result.name = matchSubject[0][1]
+	result.serial = matchSerial[0][1]
+	result.notAfterTime = t
+
+	return &result
 }

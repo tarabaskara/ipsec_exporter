@@ -18,7 +18,7 @@ func TestQueryCerts(t *testing.T) {
 	certs := queryCerts(&dummyCertsProvider{returnString: `
 List of X.509 End Entity Certificates:
 
-  altNames:  org1.vpn.something.com,org2.vpn.something.com,
+  altNames:  org1.vpn.something.com,org2.vpn.something.com
   subject:  "CN=org1.vpn.something.com"
   issuer:   "C=US, O=Let's Encrypt, CN=Let's Encrypt Authority X3"
   serial:    04:0f:8e:47:cc:17:38:c4:54:15:1a:24:28:0c:e7:05:3e:f5
@@ -32,9 +32,9 @@ List of X.509 End Entity Certificates:
   altNames:  org2.vpn.something.com
   subject:  "CN=org2.vpn.something.com"
   issuer:   "C=US, O=Let's Encrypt, CN=Let's Encrypt Authority X3"
-  serial:    03:65:89:ef:d3:e6:90:a2:d1:3d:c2:ef:02:b2:88:c4:49:28
   validity:  not before Feb 07 11:01:11 2020, ok
              not after  May 07 11:01:11 2020, ok
+  serial:    03:65:89:ef:d3:e6:90:a2:d1:3d:c2:ef:02:b2:88:c4:49:28
   pubkey:    RSA 4096 bits
   keyid:     65:f0:fc:61:99:b8:6e:ba:0b:ec:ba:e5:42:b5:e8:9f:ae:b2:86:d5
   subjkey:   69:c0:59:38:d7:11:6f:b5:86:92:da:1c:9d:c7:2a:a3:89:5b:0b:a1
